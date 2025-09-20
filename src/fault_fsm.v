@@ -1,21 +1,22 @@
 // fault_fsm.v
-// HDL Fault Detection FSM
-// States: NORMAL -> WARNING -> FAULT -> SHUTDOWN
+// Fault Detection FSM for Arys Garage Assignment
+// Rahul - Sept 2025
 
 `timescale 1ns/1ps
 module fault_fsm #(
-    parameter integer P_WARN   = 5,   // cycles to assert WARNING
-    parameter integer P_FAULT  = 12,  // cycles to assert FAULT
-    parameter integer P_SHUT   = 30   // cycles to assert SHUTDOWN
+    parameter integer P_WARN   = 5,    // cycles to assert WARNING
+    parameter integer P_FAULT  = 12,   // cycles to assert FAULT
+    parameter integer P_SHUT   = 30    // cycles to assert SHUTDOWN
 )(
     input  wire clk,
     input  wire rst_n,
-    input  wire ov, uv, ot, uc,      // fault inputs
+    input  wire ov, uv, ot, uc,          // fault inputs
     input  wire mask_ov, mask_uv, mask_ot, mask_uc, // masking
-    input  wire clear_warning,       // operator ack
-    output reg  [1:0] state,         // FSM state
+    input  wire clear_warning,           // operator ack
+    output reg  [1:0] state,             // FSM state
     output reg  warn, fault, shutdown,
-    output reg  [2:0] active_fault_id
+    output reg  [2:0] active_fault_id,   // fault ID
+    output reg  [7:0] cnt_uv, cnt_ov, cnt_ot, cnt_uc // counters (for CSV logging)
 );
 
     // State encoding
@@ -42,7 +43,6 @@ module fault_fsm #(
     always @(*) active_fault_id = chosen_fault;
 
     // Counters
-    integer cnt_uv, cnt_ov, cnt_ot, cnt_uc;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             cnt_uv <= 0; cnt_ov <= 0; cnt_ot <= 0; cnt_uc <= 0;
@@ -54,13 +54,14 @@ module fault_fsm #(
         end
     end
 
-    // Next state logic
+    // State register
     reg [1:0] nxt_state;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) state <= S_NORMAL;
         else state <= nxt_state;
     end
 
+    // Next state logic
     always @(*) begin
         warn=0; fault=0; shutdown=0;
         nxt_state = state;
@@ -92,7 +93,7 @@ module fault_fsm #(
             end
             S_SHUTDOWN: begin
                 shutdown=1;
-                nxt_state=S_SHUTDOWN;
+                nxt_state=S_SHUTDOWN; // latched until reset
             end
         endcase
     end
