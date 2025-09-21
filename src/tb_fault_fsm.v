@@ -29,6 +29,13 @@ module tb_fault_fsm;
     // Clock generation
     always #5 clk = ~clk;
 
+    // VCD dump for GTKWave
+    initial begin
+        $dumpfile("tb_fault_fsm.vcd");
+        $dumpvars(0, tb_fault_fsm);
+        $dumpvars(0, uut);
+    end
+
     // CSV logging
     integer csv;
     initial begin
@@ -41,17 +48,12 @@ module tb_fault_fsm;
             cnt_uv, cnt_ov, cnt_ot, cnt_uc, ov, uv, ot, uc);
     end
     initial begin
-        #2000; // stop after some time
+        #2000;
         $fclose(csv);
     end
 
-    // Simulation stimulus
+    // Stimulus
     initial begin
-        $dumpfile("tb_fault_fsm.vcd");
-        $dumpvars(0, tb_fault_fsm);  // dump testbench scope
-        $dumpvars(0, uut);           // dump DUT scope
-
-
         clk=0; rst_n=0;
         ov=0; uv=0; ot=0; uc=0;
         mask_ov=0; mask_uv=0; mask_ot=0; mask_uc=0;
@@ -59,16 +61,16 @@ module tb_fault_fsm;
 
         #20 rst_n=1;
 
-        // Test 1: transient UC (ignored)
+        // Case 1: transient UC (ignored)
         uc=1; #10; uc=0; #50;
 
-        // Test 2: persistent OV -> WARNING->FAULT->clear
+        // Case 2: persistent OV -> WARNING -> FAULT -> clear
         ov=1; #200; ov=0; clear_warning=1; #20; clear_warning=0; #50;
 
-        // Test 3: persistent UC -> SHUTDOWN
+        // Case 3: persistent UC -> SHUTDOWN
         uc=1; #400; uc=0; #50;
 
-        // Test 4: masking
+        // Case 4: masking UC
         mask_uc=1; uc=1; #200; uc=0; mask_uc=0; #50;
 
         $finish;
